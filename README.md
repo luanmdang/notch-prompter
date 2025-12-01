@@ -1,28 +1,28 @@
 # Notch Prompter (macOS)  
 Turn your notch into a teleprompter! 
 
+![me](https://github.com/luanmdang/notch-prompter/blob/main/Notch-prompter-showcase.gif)
+
 Notch-Prompter is a minimal, native macOS teleprompter that expands directly from the MacBook notch.
-(Okay... the actual activation area is not so perfect... it's slightly at the edge the notch)
 
-Open-source Swift + SwiftUI + AppKit menu bar app designed for creators, presenters, and anyone who wants to maintain natural eye-contact on camera. Hover over the notch (or use a hotkey) and a small teleprompter panel smoothly rolls down beneath the camera, displaying your script exactly where your eyes already are.
+Designed for presenters, creators, and anyone who wants to maintain natural eye-contact with the camera. Hover over the notch (or use a hotkey) and a small teleprompter panel smoothly expands from the notch, displaying your script exactly where your eyes already are!
 
-Heavily inspired by the amazing Alcove app for Mac.
+Inspired by my love for the amazing Alcove app for Mac.
 
-## ✨ Features
-- **Notch-activated teleprompter:** Hover near the notch and the panel animates downward.  
-- Three different themes to choose from 
-- **Minimal footprint:** Small screen space, low CPU usage, smooth even on older MacBooks.  
-- **Local script library:** Create, edit, and switch between multiple scripts.  
-- **Smooth or stepped scrolling:** Adjustable speed, play/pause, and manual scrolling.  
-- **Fully native:** Pure Swift, SwiftUI views, and AppKit windows.
+## Write and store your scripts!
+![me](https://github.com/luanmdang/notch-prompter/blob/main/edit-new-scripts.gif)
+
+## Three themes to choose from
+![me](https://github.com/luanmdang/notch-prompter/blob/main/three-themes.gif)
+
+## Fully customizable size and padding
+![me](https://github.com/luanmdang/notch-prompter/blob/main/customize-size.gif)
 
 ---
+## Ideas for your own build
+Have it recognize the words you're saying and automatically scroll based on your completion of the script!
 
-## 🛠 Tech Used
-- **Swift**  
-- **SwiftUI**  
-- **AppKit** (overlay window, global hotkeys, mouse tracking)  
-- **Combine**
+Add other productivity tools within it.
 
 ---
 
