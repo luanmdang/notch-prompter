@@ -210,7 +210,8 @@ struct ScriptsPreferencesView: View {
         }
         .onAppear {
             // Initialize selection from persisted store; if none, pick first available.
-            selection = controller.scriptStore.selectedScriptID ?? controller.scriptStore.scripts.first?.id
+            selection = controller.scriptStore.selectedScriptID
+                ?? controller.scriptStore.scripts.first?.id
         }
     }
 
@@ -260,7 +261,7 @@ struct ScriptsPreferencesView: View {
                     reconcileSelectionAfterDeletion()
                 }
             }
-            .onChange(of: selection) { oldValue, newValue in
+            .onChange(of: selection) { _, newValue in
                 guard let id = newValue, let script = controller.scriptStore.script(with: id) else { return }
                 controller.scriptStore.selectedScriptID = id
                 // Apply to teleprompter so it shows the selected script.
@@ -341,9 +342,8 @@ struct ScriptsPreferencesView: View {
             controller.scriptStore.selectedScriptID = first.id
             controller.currentScript = first
         } else {
+            // No scripts remain; clear local selection and leave store as-is.
             selection = nil
-            controller.scriptStore.selectedScriptID = nil
-            controller.currentScript = nil
         }
     }
 
@@ -354,4 +354,3 @@ struct ScriptsPreferencesView: View {
         controller.currentScript = script
     }
 }
-

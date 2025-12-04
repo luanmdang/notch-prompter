@@ -44,14 +44,14 @@ struct TeleprompterView: View {
             cancelAutoScrollTask()
             contentReady = false
         }
-        .onChange(of: controller.isVisible) {
+        .onChange(of: controller.isVisible) { _, _ in
             scheduleAutoScrollIfNeeded()
         }
-        .onChange(of: controller.autoScrollDelay) {
+        .onChange(of: controller.autoScrollDelay) { _, _ in
             // If user adjusts the delay while the panel is visible, reschedule with the new value.
             scheduleAutoScrollIfNeeded()
         }
-        .onChange(of: controller.currentScript?.id) {
+        .onChange(of: controller.currentScript?.id) { _, _ in
             // New script loaded; mark content as not ready until the ScrollView appears.
             contentReady = false
         }
@@ -104,10 +104,10 @@ struct TeleprompterView: View {
                 // Now that content is ready, (re)schedule auto-scroll if needed.
                 scheduleAutoScrollIfNeeded()
             }
-            .onChange(of: controller.scrollOffset) {
+            .onChange(of: controller.scrollOffset) { _, _ in
                 scrollToCurrentOffset(proxy: proxy, animated: true)
             }
-            .onChange(of: controller.currentScript?.id) {
+            .onChange(of: controller.currentScript?.id) { _, _ in
                 controller.estimatedScriptLineCount = max(lines.count, 1)
                 contentReady = true
                 scrollToCurrentOffset(proxy: proxy, animated: false)
@@ -149,7 +149,7 @@ struct TeleprompterView: View {
         cancelAutoScrollTask()
 
         let delay = controller.autoScrollDelay
-        autoScrollTask = Task {
+        autoScrollTask = Task { [weak controller] in
             // Sleep for the configured delay (in seconds).
             if delay > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -158,9 +158,9 @@ struct TeleprompterView: View {
             if Task.isCancelled { return }
 
             await MainActor.run {
+                guard let controller else { return }
                 // Re-check conditions before starting.
                 guard controller.isVisible,
-                      contentReady,
                       !controller.isPlaying,
                       !controller.endOfScriptReached
                 else { return }
@@ -177,4 +177,3 @@ struct TeleprompterView: View {
         autoScrollTask = nil
     }
 }
-

@@ -11,6 +11,7 @@ import QuartzCore
 final class TeleprompterWindowController {
     private let controller: TeleprompterController
     private var window: NSPanel?
+    private var contentContainerView: NSView? // Used for blob-style animations
 
     init(controller: TeleprompterController) {
         self.controller = controller
@@ -53,6 +54,7 @@ final class TeleprompterWindowController {
 
         guard animated else {
             window.alphaValue = 1.0
+            resetBlobVisualsForAppear()
             return
         }
 
@@ -66,13 +68,17 @@ final class TeleprompterWindowController {
         let initialY = topY - initialHeight
         let initialFrame = NSRect(x: initialX, y: initialY, width: initialWidth, height: initialHeight)
 
-        window.alphaValue = 0
+        // Keep fully opaque throughout; no fade-in
+        window.alphaValue = 1.0
         window.setFrame(initialFrame, display: false)
+
+        // Prepare blob appear visuals (rounded + slightly squashed)
+        applyBlobAppearAnimation(duration: 0.22)
 
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.22
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().alphaValue = 1.0
+            // Only animate the frame; no opacity animation
             window.animator().setFrame(finalFrame, display: true)
         }
     }
@@ -96,12 +102,16 @@ final class TeleprompterWindowController {
         let finalY = topY - finalHeight
         let endFrame = NSRect(x: finalX, y: finalY, width: finalWidth, height: finalHeight)
 
+        // Apply blob-style shrinking animation on content while the window shrinks (no opacity change).
+        applyBlobDisappearAnimation(duration: duration)
+
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = duration
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            window.animator().alphaValue = 0
+            // Keep fully opaque; only animate the frame shrinking into the notch
             window.animator().setFrame(endFrame, display: true)
         }, completionHandler: {
+            self.resetBlobVisualsAfterDisappear()
             window.orderOut(nil)
         })
     }
@@ -156,6 +166,8 @@ final class TeleprompterWindowController {
             hostingView.autoresizingMask = [.width, .height]
             effectView.addSubview(hostingView)
 
+            self.contentContainerView = effectView
+
         case .retro, .document:
             // Pitch-black panel that blends with the notch
             panel.hasShadow = false
@@ -174,6 +186,8 @@ final class TeleprompterWindowController {
             hostingView.frame = contentRoot.bounds
             hostingView.autoresizingMask = [.width, .height]
             contentRoot.addSubview(hostingView)
+
+            self.contentContainerView = contentRoot
         }
 
         self.window = panel
@@ -268,6 +282,79 @@ final class TeleprompterWindowController {
         let layoutRect = window.contentLayoutRect
         window.orderOut(nil)
         return layoutRect
+    }
+
+    // MARK: - Blob animation helpers
+
+    private func applyBlobAppearAnimation(duration: TimeInterval) {
+        guard let container = contentContainerView else { return }
+        container.wantsLayer = true
+        guard let layer = container.layer else { return }
+
+        // Reset to rounded and slightly scaled down so it grows organically.
+        let targetCorner: CGFloat = 12
+        let startCorner: CGFloat = min(container.bounds.width, container.bounds.height) / 2.0
+        layer.cornerRadius = targetCorner
+        layer.masksToBounds = true
+
+        // Corner radius animation (from very round to standard radius)
+        let cornerAnim = CABasicAnimation(keyPath: "cornerRadius")
+        cornerAnim.fromValue = startCorner
+        cornerAnim.toValue = targetCorner
+        cornerAnim.duration = duration
+        cornerAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        // Subtle scale up to 1.0
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 0.95
+        scaleAnim.toValue = 1.0
+        scaleAnim.duration = duration
+        scaleAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+        layer.add(cornerAnim, forKey: "cornerRadius.appear")
+        layer.add(scaleAnim, forKey: "transform.scale.appear")
+    }
+
+    private func applyBlobDisappearAnimation(duration: TimeInterval) {
+        guard let container = contentContainerView else { return }
+        container.wantsLayer = true
+        guard let layer = container.layer else { return }
+
+        let endCorner: CGFloat = min(container.bounds.width, container.bounds.height) / 2.0
+
+        // Corner radius: become more round as it shrinks
+        let cornerAnim = CABasicAnimation(keyPath: "cornerRadius")
+        cornerAnim.fromValue = layer.cornerRadius
+        cornerAnim.toValue = endCorner
+        cornerAnim.duration = duration
+        cornerAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer.cornerRadius = endCorner
+
+        // Subtle squish as it collapses
+        let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
+        scaleAnim.fromValue = 1.0
+        scaleAnim.toValue = 0.95
+        scaleAnim.duration = duration
+        scaleAnim.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        layer.setAffineTransform(.identity) // ensure no stale transform
+
+        layer.add(cornerAnim, forKey: "cornerRadius.disappear")
+        layer.add(scaleAnim, forKey: "transform.scale.disappear")
+    }
+
+    private func resetBlobVisualsForAppear() {
+        guard let container = contentContainerView else { return }
+        container.wantsLayer = true
+        container.layer?.removeAllAnimations()
+        container.layer?.cornerRadius = 12
+        container.layer?.setAffineTransform(.identity)
+    }
+
+    private func resetBlobVisualsAfterDisappear() {
+        guard let container = contentContainerView else { return }
+        container.layer?.removeAllAnimations()
+        container.layer?.cornerRadius = 12
+        container.layer?.setAffineTransform(.identity)
     }
 }
 
