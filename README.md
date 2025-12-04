@@ -32,6 +32,9 @@ If you build your own version, share it — would love to see what you create.
 
 ---
 
+## Releases
+Please note that I usually push new updates without updated the release packages. To ensure you get the latest version of the app, you can download and build the project locally!
+
 ## 📄 License
 MIT License — free for personal and commercial use.
 
