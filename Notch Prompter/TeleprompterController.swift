@@ -64,6 +64,11 @@ final class TeleprompterController: ObservableObject {
         didSet { UserDefaults.standard.set(autoScrollDelay, forKey: "autoScrollDelay") }
     }
 
+    // Manual auto-scroll hotkey digit (1...5)
+    @Published var manualAutoScrollDigit: Int = 1 {
+        didSet { UserDefaults.standard.set(manualAutoScrollDigit, forKey: "manualAutoScrollDigit") }
+    }
+
     // Activation area customization
     @Published var activationZoneWidthMultiplier: Double = 1.0 {
         didSet { UserDefaults.standard.set(activationZoneWidthMultiplier, forKey: "activationZoneWidthMultiplier") }
@@ -103,7 +108,7 @@ final class TeleprompterController: ObservableObject {
     // MARK: - Private
 
     private var timer: Timer?
-    private var lastTick: Date?
+       private var lastTick: Date?
 
     private init() {
         loadPersistedSettings()
@@ -211,6 +216,15 @@ final class TeleprompterController: ObservableObject {
         pause()
     }
 
+    /// Manually trigger auto-scroll via hotkey or UI.
+    func triggerAutoScrollNow() {
+        if !isVisible {
+            showTeleprompter(autoPlay: true)
+        } else if !isPlaying {
+            play()
+        }
+    }
+
     // MARK: - Timer / scroll engine
 
     private func restartTimer() {
@@ -292,6 +306,8 @@ final class TeleprompterController: ObservableObject {
         treatAsNotched                = d.object(forKey: "treatAsNotched").flatMap { $0 as? Bool } ?? false
 
         contentTopPadding             = d.object(forKey: "contentTopPadding").flatMap { $0 as? Double } ?? 40
+
+        manualAutoScrollDigit         = d.object(forKey: "manualAutoScrollDigit").flatMap { $0 as? Int } ?? 1
     }
 }
 
@@ -302,4 +318,3 @@ private extension Double {
         self == 0 ? fallback : self
     }
 }
-

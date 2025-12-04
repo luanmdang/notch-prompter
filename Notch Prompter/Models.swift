@@ -123,3 +123,39 @@ enum HideSpeed: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+// MARK: - Hotkeys
+
+enum HotkeyChoice: String, CaseIterable, Codable, Identifiable {
+    case none
+    case optionCommand1
+    case optionCommand2
+    case optionCommand3
+    case optionCommand4
+    case optionCommand5
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .none:             return "None"
+        case .optionCommand1:   return "⌥⌘1"
+        case .optionCommand2:   return "⌥⌘2"
+        case .optionCommand3:   return "⌥⌘3"
+        case .optionCommand4:   return "⌥⌘4"
+        case .optionCommand5:   return "⌥⌘5"
+        }
+    }
+
+    /// Character expected for the numeric key when pressed (ignoring modifiers)
+    var keyCharacter: String? {
+        switch self {
+        case .none:             return nil
+        case .optionCommand1:   return "1"
+        case .optionCommand2:   return "2"
+        case .optionCommand3:   return "3"
+        case .optionCommand4:   return "4"
+        case .optionCommand5:   return "5"
+        }
+    }
+}
+

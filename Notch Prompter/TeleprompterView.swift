@@ -7,6 +7,8 @@ import SwiftUI
 
 struct TeleprompterView: View {
     @EnvironmentObject var controller: TeleprompterController
+    @State private var autoScrollTask: Task<Void, Never>?
+    @State private var contentReady: Bool = false
 
     // We derive lines from script content
     private var lines: [String] {
@@ -33,6 +35,25 @@ struct TeleprompterView: View {
         }
         .onTapGesture {
             controller.togglePlay()
+        }
+        .onAppear {
+            // If the panel is already visible when this view appears, schedule auto-scroll once content is ready.
+            scheduleAutoScrollIfNeeded()
+        }
+        .onDisappear {
+            cancelAutoScrollTask()
+            contentReady = false
+        }
+        .onChange(of: controller.isVisible) {
+            scheduleAutoScrollIfNeeded()
+        }
+        .onChange(of: controller.autoScrollDelay) {
+            // If user adjusts the delay while the panel is visible, reschedule with the new value.
+            scheduleAutoScrollIfNeeded()
+        }
+        .onChange(of: controller.currentScript?.id) {
+            // New script loaded; mark content as not ready until the ScrollView appears.
+            contentReady = false
         }
     }
 
@@ -76,15 +97,21 @@ struct TeleprompterView: View {
             }
             .background(backgroundColor)
             .onAppear {
+                // Content is now ready; update line count and scroll to the saved offset.
                 controller.estimatedScriptLineCount = max(lines.count, 1)
+                contentReady = true
                 scrollToCurrentOffset(proxy: proxy, animated: false)
+                // Now that content is ready, (re)schedule auto-scroll if needed.
+                scheduleAutoScrollIfNeeded()
             }
-            .onChange(of: controller.scrollOffset) { _ in
+            .onChange(of: controller.scrollOffset) {
                 scrollToCurrentOffset(proxy: proxy, animated: true)
             }
-            .onChange(of: controller.currentScript?.id) { _ in
+            .onChange(of: controller.currentScript?.id) {
                 controller.estimatedScriptLineCount = max(lines.count, 1)
+                contentReady = true
                 scrollToCurrentOffset(proxy: proxy, animated: false)
+                scheduleAutoScrollIfNeeded()
             }
         }
     }
@@ -107,6 +134,47 @@ struct TeleprompterView: View {
         } else {
             proxy.scrollTo(target, anchor: .center)
         }
+    }
+
+    // MARK: - Auto-scroll scheduling
+
+    private func scheduleAutoScrollIfNeeded() {
+        // Only auto-scroll when the panel is visible and content is ready.
+        guard controller.isVisible, contentReady else {
+            cancelAutoScrollTask()
+            return
+        }
+
+        // Cancel any pending task before scheduling a new one.
+        cancelAutoScrollTask()
+
+        let delay = controller.autoScrollDelay
+        autoScrollTask = Task {
+            // Sleep for the configured delay (in seconds).
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            // Bail if cancelled during the wait.
+            if Task.isCancelled { return }
+
+            await MainActor.run {
+                // Re-check conditions before starting.
+                guard controller.isVisible,
+                      contentReady,
+                      !controller.isPlaying,
+                      !controller.endOfScriptReached
+                else { return }
+
+                // Ensure we don't get stuck due to stale endOfScript flag.
+                controller.endOfScriptReached = false
+                controller.play()
+            }
+        }
+    }
+
+    private func cancelAutoScrollTask() {
+        autoScrollTask?.cancel()
+        autoScrollTask = nil
     }
 }
 

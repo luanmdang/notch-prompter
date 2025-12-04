@@ -176,6 +176,16 @@ struct BehaviorPreferencesView: View {
                 }
             }
 
+            Section("Manual Auto-Scroll") {
+                Button {
+                    controller.play()
+                } label: {
+                    Label("Start Auto-Scroll Now", systemImage: "play.fill")
+                }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+                .help("Use ⌥⌘S to manually start auto-scroll while Preferences is focused.")
+            }
+
             Section("Toggle Mode") {
                 Toggle("Pause scrolling when hidden", isOn: $controller.pauseWhenHiddenInToggleMode)
                 Toggle("Reset to top when hidden", isOn: $controller.resetToTopWhenHiddenInToggleMode)
@@ -199,7 +209,8 @@ struct ScriptsPreferencesView: View {
             scriptEditor
         }
         .onAppear {
-            selection = controller.scriptStore.selectedScriptID
+            // Initialize selection from persisted store; if none, pick first available.
+            selection = controller.scriptStore.selectedScriptID ?? controller.scriptStore.scripts.first?.id
         }
     }
 
@@ -218,6 +229,15 @@ struct ScriptsPreferencesView: View {
                     Image(systemName: "plus")
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    deleteSelectedScript()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .disabled(selection == nil)
+                .buttonStyle(.plain)
+                .help("Delete selected script")
             }
             .padding([.top, .horizontal])
 
@@ -236,8 +256,27 @@ struct ScriptsPreferencesView: View {
                     indexSet.compactMap { controller.scriptStore.scripts[$0] }.forEach { script in
                         controller.scriptStore.deleteScript(script)
                     }
+                    // After deletion from swipe/keyboard, reconcile selection.
+                    reconcileSelectionAfterDeletion()
                 }
             }
+            .onChange(of: selection) { oldValue, newValue in
+                guard let id = newValue, let script = controller.scriptStore.script(with: id) else { return }
+                controller.scriptStore.selectedScriptID = id
+                // Apply to teleprompter so it shows the selected script.
+                controller.currentScript = script
+            }
+
+            HStack {
+                Button {
+                    useSelectedScriptInTeleprompter()
+                } label: {
+                    Label("Use Selected", systemImage: "text.viewfinder")
+                }
+                .disabled(selection == nil)
+                Spacer()
+            }
+            .padding([.horizontal, .bottom])
         }
     }
 
@@ -286,4 +325,33 @@ struct ScriptsPreferencesView: View {
             }
         }
     }
+
+    // MARK: - Helpers
+
+    private func deleteSelectedScript() {
+        guard let id = selection,
+              let script = controller.scriptStore.script(with: id) else { return }
+        controller.scriptStore.deleteScript(script)
+        reconcileSelectionAfterDeletion()
+    }
+
+    private func reconcileSelectionAfterDeletion() {
+        if let first = controller.scriptStore.scripts.first {
+            selection = first.id
+            controller.scriptStore.selectedScriptID = first.id
+            controller.currentScript = first
+        } else {
+            selection = nil
+            controller.scriptStore.selectedScriptID = nil
+            controller.currentScript = nil
+        }
+    }
+
+    private func useSelectedScriptInTeleprompter() {
+        guard let id = selection,
+              let script = controller.scriptStore.script(with: id) else { return }
+        controller.scriptStore.selectedScriptID = id
+        controller.currentScript = script
+    }
 }
+
